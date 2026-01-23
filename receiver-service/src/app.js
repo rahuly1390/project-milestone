@@ -5,6 +5,7 @@ const routes = require('./routes/routes');
 const path = require('path');
 const app = express();
 const authRoutes = require('./routes/auth');
+
 // const authMock = (req, res, next) => {
 //     const authHeader = req.headers.authorization;
 //     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -13,10 +14,11 @@ const authRoutes = require('./routes/auth');
 //             message: "Mock Bearer token required (e.g., Bearer user_123)" 
 //         });
 //     }
-//     // Extract token and set as sub (Subject/User ID)
+//     // // Extract token and set as sub (Subject/User ID)
 //     req.user = { sub: authHeader.split(' ')[1] };
 //     next();
 // };
+/// Changes
 
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key';
