@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'receivers-service'
+    static_configs:
+      - targets: ['receivers-service:3000']
+      
+  - job_name: 'notification-service'
+    static_configs:
+      - targets: ['notification-service:3002']

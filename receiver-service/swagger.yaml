@@ -1,0 +1,149 @@
+openapi: 3.0.0
+info:
+  title: Receivers Management API
+  version: 1.0.0
+  description: API for managing beneficiaries with OTP verification and daily limits.
+
+servers:
+  - url: http://localhost:3000
+    description: Local Development Server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Receiver:
+      type: object
+      properties:
+        receiverId: { type: string, example: "rcv_8f12a9" }
+        status: { type: string, example: "PENDING_OTP_VERIFICATION" }
+        name: { type: string, example: "Ravi Kumar" }
+        bank:
+          type: object
+          properties:
+            ifsc: { type: string, example: "HDFC0001234" }
+        maskedAccount: { type: string, example: "********9012" }
+        createdAt: { type: string, format: date-time }
+
+security:
+  - bearerAuth: []
+
+paths:
+  # Add Login to Swagger so you can get the token directly from the UI
+  /api/login:
+    post:
+      summary: Login to get JWT Token
+      tags: [Authentication]
+      security: [] # No token needed to login!
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, example: "test@example.com" }
+                password: { type: string, example: "password123" }
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+
+
+  /receivers:
+    post:
+      summary: Create a new receiver
+      tags: [Receivers]
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema: { type: string, format: uuid }
+          required: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, ifsc, accountNumber]
+              properties:
+                name: { type: string }
+                ifsc: { type: string }
+                accountNumber: { type: string }
+                nickname: { type: string }
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Receiver' }
+        409:
+          description: DUPLICATE_RECEIVER
+
+    get:
+      summary: List receivers for the logged-in customer
+      tags: [Receivers]
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [ACTIVE, VERIFIED, PENDING_OTP_VERIFICATION] }
+      responses:
+        200:
+          description: List of receivers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Receiver' }
+
+  /receivers/{receiverId}/otp:
+    post:
+      summary: Request OTP for receiver verification
+      tags: [OTP]
+      parameters:
+        - name: receiverId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                channel: { type: string, example: "SMS" }
+      responses:
+        202:
+          description: OTP Sent
+
+  /receivers/{receiverId}/verify-otp:
+    post:
+      summary: Verify OTP and activate receiver
+      tags: [OTP]
+      parameters:
+        - name: receiverId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [otpRequestId, otp]
+              properties:
+                otpRequestId: { type: string }
+                otp: { type: string }
+      responses:
+        200:
+          description: VERIFIED
