@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: receiver-service-monitor
+  namespace: monitoring # Usually where Prometheus Operator is installed
+  labels:
+    release: prometheus-stack # This label MUST match your Prometheus object's serviceMonitorSelector
+spec:
+  selector:
+    matchLabels:
+      app: receiver-service # Matches the label we added to the Service above
+  namespaceSelector:
+    matchNames:
+      - default # The namespace where your Receiver Service is running
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 15s
