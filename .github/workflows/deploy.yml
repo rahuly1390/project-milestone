@@ -1,0 +1,32 @@
+name: Build and Push to Docker Hub
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Receiver Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./receiver-service
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/receiver-service:latest
+
+      - name: Build and push Notification Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./notification-service
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/notification-service:latest
