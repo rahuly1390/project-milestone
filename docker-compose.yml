@@ -1,12 +1,14 @@
 services:
-  # --- INFRASTRUCTURE: MESSAGE BROKER ---
+  # --- INFRASTRUCTURE ---
   rabbitmq:
     image: rabbitmq:4-management
+    container_name: rabbitmq
+    hostname: rabbitmq
     networks:
       - banking-network
     ports:
-      - "5672:5672"   # RabbitMQ Port
-      - "15672:15672" # Management UI
+      - "5672:5672"
+      - "15672:15672"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "check_running"]
       interval: 10s
@@ -15,15 +17,17 @@ services:
 
   maildev:
     image: maildev/maildev
+    container_name: maildev
     networks:
       - banking-network
     ports:
-      - "1080:1080" # Web UI
-      - "1025:1025" # SMTP
+      - "1080:1080"
+      - "1025:1025"
 
   # --- RECEIVER SERVICE STACK ---
   receiver-db:
     image: postgres:16
+    container_name: receiver-db
     networks:
       - banking-network
     environment:
@@ -42,6 +46,7 @@ services:
 
   receivers-service:
     build: ./receiver-service
+    container_name: receivers-service
     networks:
       - banking-network
     ports:
@@ -80,6 +85,8 @@ services:
   # --- NOTIFICATION SERVICE STACK ---
   notification-db:
     image: postgres:16
+    container_name: notification-db
+    hostname: notification-db
     networks:
       - banking-network
     environment:
@@ -98,6 +105,7 @@ services:
 
   notification-service:
     build: ./notification-service
+    container_name: notification-service
     networks:
       - banking-network
     ports:
@@ -122,6 +130,7 @@ services:
   # --- MONITORING ---
   prometheus:
     image: prom/prometheus:latest
+    container_name: prometheus
     networks:
       - banking-network
     volumes:
@@ -133,6 +142,7 @@ services:
 
   grafana:
     image: grafana/grafana:latest
+    container_name: grafana
     networks:
       - banking-network
     ports:
@@ -151,7 +161,6 @@ services:
     entrypoint: ["k6", "run", "/scripts/load-test.js"]
     profiles: [test]
 
-# --- NETWORKS & VOLUMES ---
 networks:
   banking-network:
     driver: bridge

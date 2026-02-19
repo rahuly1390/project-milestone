@@ -1,11 +1,19 @@
 global:
-  scrape_interval: 15s
+  scrape_interval: 15s # How often to fetch metrics
+  evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: 'receivers-service'
+  # 1. Monitor Prometheus itself
+  - job_name: 'prometheus'
     static_configs:
-      - targets: ['receivers-service:3000']
-      
+      - targets: ['localhost:9090']
+
+  # 2. Monitor the Receiver Service (Go)
+  - job_name: 'receiver-service'
+    static_configs:
+      - targets: ['receivers-service:3000'] # Service name from docker-compose
+
+  # 3. Monitor the Notification Service (Node.js)
   - job_name: 'notification-service'
     static_configs:
-      - targets: ['notification-service:3002']
+      - targets: ['notification-service:3002'] # Service name from docker-compose
