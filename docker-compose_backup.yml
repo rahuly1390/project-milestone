@@ -1,0 +1,137 @@
+# services:
+#   # --- INFRASTRUCTURE: MESSAGE BROKER ---
+#   rabbitmq:
+#     image: rabbitmq:4-management
+#     ports:
+#       - "5672:5672"   # RabbitMQ Port
+#       - "15672:15672" # Management UI (guest/guest)
+#     healthcheck:
+#       test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+
+#   maildev:
+#     image: maildev/maildev
+#     ports:
+#       - "1080:1080" # Web UI for emails
+#       - "1025:1025" # SMTP
+
+#   # --- RECEIVER SERVICE STACK ---
+#   receiver-db:
+#     image: postgres:16
+#     environment:
+#       POSTGRES_USER: user
+#       POSTGRES_PASSWORD: postgres
+#       POSTGRES_DB: receivers_db
+#     ports:
+#       - "5433:5432"
+#     volumes:
+#       - receiver_data:/var/lib/postgresql/data
+#     healthcheck:
+#       test: ["CMD-SHELL", "pg_isready -U user -d receivers_db"]
+#       interval: 5s
+#       timeout: 5s
+#       retries: 5
+
+#   receivers-service:
+#     build: ./receiver-service # Path to your receiver folder
+#     ports:
+#       - "3000:3000"
+#     environment:
+#       - DATABASE_URL=postgres://user:postgres@receiver-db:5432/receivers_db
+#       - RABBITMQ_URL=amqp://rabbitmq:5672
+#       - JWT_SECRET=mock-secret-key
+#       - PORT=3000
+#     depends_on:
+#       receiver-db:
+#         condition: service_healthy
+#       rabbitmq:
+#         condition: service_healthy
+
+# # Add this to your root docker-compose.yml to run BDD tests
+#  # BDD Tester for Receiver Service
+#   receiver-test:
+#     build: ./receiver-service
+#     profiles: ["test"]
+#     environment:
+#       - DATABASE_URL=postgres://user:postgres@receiver-db:5432/receivers_db
+#     command: npm run test:bdd
+
+#   # BDD Tester for Notification Service
+#   notification-test:
+#     build: ./notification-service
+#     networks:
+#       - banking-network # Ensure this matches your DB's network
+#     profiles: ["test"]
+#     environment:
+#       - DATABASE_URL=postgres://user:password@notification-db:5432/notification_db
+#       - SMTP_HOST=maildev
+#     command: npm run test:bdd
+
+#   # --- NOTIFICATION SERVICE STACK ---
+#   notification-db:
+#     image: postgres:16
+#     environment:
+#       POSTGRES_USER: user
+#       POSTGRES_PASSWORD: password
+#       POSTGRES_DB: notification_db
+#     ports:
+#       - "5434:5432"
+#     volumes:
+#       - notification_data:/var/lib/postgresql/data
+#     healthcheck:
+#       test: ["CMD-SHELL", "pg_isready -U user -d notification_db"]
+#       interval: 5s
+#       timeout: 5s
+#       retries: 5
+
+#   notification-service:
+#     build: ./notification-service # Path to your notification folder
+#     ports:
+#       - "3002:3002"
+#     environment:
+#       - DATABASE_URL=postgres://user:password@notification-db:5432/notification_db
+#       - DB_HOST=notification-db
+#       - DB_PORT=5432
+#       - DB_USER=user
+#       - DB_PASS=password
+#       - DB_NAME=notification_db
+#       - RABBITMQ_URL=amqp://rabbitmq:5672
+#       - SMTP_HOST=maildev
+#       - SMTP_PORT=1025
+#       - PORT=3002
+#     depends_on:
+#       notification-db:
+#         condition: service_healthy
+#       rabbitmq:
+#         condition: service_healthy
+
+#   # --- MONITORING ---
+#   prometheus:
+#     image: prom/prometheus:latest
+#     volumes:
+#       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+#     ports:
+#       - "9090:9090"
+#     depends_on:
+#       - receivers-service
+
+#   grafana:
+#     image: grafana/grafana:latest
+#     ports:
+#       - "3001:3000"
+#     environment:
+#       - GF_SECURITY_ADMIN_PASSWORD=admin
+#     depends_on:
+#       - prometheus
+#   k6:
+#     image: grafana/k6:latest
+#     volumes:
+#       - ./load-tests:/scripts # Maps your local folder to /scripts in container
+#     entrypoint: ["k6", "run", "/scripts/load-test.js"]
+#     profiles: [test]
+
+# volumes:
+#   receiver_data:
+#   notification_data:

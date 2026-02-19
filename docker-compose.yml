@@ -2,9 +2,11 @@ services:
   # --- INFRASTRUCTURE: MESSAGE BROKER ---
   rabbitmq:
     image: rabbitmq:4-management
+    networks:
+      - banking-network
     ports:
       - "5672:5672"   # RabbitMQ Port
-      - "15672:15672" # Management UI (guest/guest)
+      - "15672:15672" # Management UI
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "check_running"]
       interval: 10s
@@ -13,13 +15,17 @@ services:
 
   maildev:
     image: maildev/maildev
+    networks:
+      - banking-network
     ports:
-      - "1080:1080" # Web UI for emails
+      - "1080:1080" # Web UI
       - "1025:1025" # SMTP
 
   # --- RECEIVER SERVICE STACK ---
   receiver-db:
     image: postgres:16
+    networks:
+      - banking-network
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: postgres
@@ -35,7 +41,9 @@ services:
       retries: 5
 
   receivers-service:
-    build: ./receiver-service # Path to your receiver folder
+    build: ./receiver-service
+    networks:
+      - banking-network
     ports:
       - "3000:3000"
     environment:
@@ -49,20 +57,20 @@ services:
       rabbitmq:
         condition: service_healthy
 
-# Add this to your root docker-compose.yml to run BDD tests
- # BDD Tester for Receiver Service
+  # --- BDD TESTERS ---
   receiver-test:
     build: ./receiver-service
+    networks:
+      - banking-network
     profiles: ["test"]
     environment:
       - DATABASE_URL=postgres://user:postgres@receiver-db:5432/receivers_db
     command: npm run test:bdd
 
-  # BDD Tester for Notification Service
   notification-test:
     build: ./notification-service
     networks:
-      - banking-network # Ensure this matches your DB's network
+      - banking-network
     profiles: ["test"]
     environment:
       - DATABASE_URL=postgres://user:password@notification-db:5432/notification_db
@@ -72,6 +80,8 @@ services:
   # --- NOTIFICATION SERVICE STACK ---
   notification-db:
     image: postgres:16
+    networks:
+      - banking-network
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
@@ -87,7 +97,9 @@ services:
       retries: 5
 
   notification-service:
-    build: ./notification-service # Path to your notification folder
+    build: ./notification-service
+    networks:
+      - banking-network
     ports:
       - "3002:3002"
     environment:
@@ -110,6 +122,8 @@ services:
   # --- MONITORING ---
   prometheus:
     image: prom/prometheus:latest
+    networks:
+      - banking-network
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
@@ -119,18 +133,28 @@ services:
 
   grafana:
     image: grafana/grafana:latest
+    networks:
+      - banking-network
     ports:
       - "3001:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     depends_on:
       - prometheus
+
   k6:
     image: grafana/k6:latest
+    networks:
+      - banking-network
     volumes:
-      - ./load-tests:/scripts # Maps your local folder to /scripts in container
+      - ./load-tests:/scripts
     entrypoint: ["k6", "run", "/scripts/load-test.js"]
     profiles: [test]
+
+# --- NETWORKS & VOLUMES ---
+networks:
+  banking-network:
+    driver: bridge
 
 volumes:
   receiver_data:
