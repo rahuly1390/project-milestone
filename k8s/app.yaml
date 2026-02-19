@@ -62,6 +62,7 @@ spec:
       containers:
       - name: notification
         image: rahuly13/notification-service:latest # Updated to your username pattern
+        imagePullPolicy: Always # Forces K8s to check for a new version
         env:
         - name: DATABASE_URL
           value: "postgres://user:password@notification-db:5432/notification_db"
