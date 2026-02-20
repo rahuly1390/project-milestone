@@ -108,8 +108,3 @@ spec:
   ports:
     - port: 80
       targetPort: 3000
-  env:
-        - name: rabbitmq
-          value: "rabbitmq:5672"
-        - name: DB_DSN
-          value: "postgres://admin:admin123@postgres:5432/receivers_db?sslmode=disable"
